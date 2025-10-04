@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Income & Expense Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f9;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; margin-bottom: 10px; }
+    .clock { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; }
+    input, select, button {
+      padding: 8px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc;
+    }
+    button { cursor: pointer; }
+    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
+    .total { font-weight: bold; text-align: right; margin-top: 15px; }
+    .tabs { display: flex; justify-content: center; margin-top: 20px; }
+    .tab {
+      flex: 1; padding: 10px; text-align: center; cursor: pointer;
+      border: 1px solid #ddd; border-bottom: none; background: #f9f9f9; font-weight: bold;
+    }
+    .tab.active { background: #fff; border-top: 2px solid #28a745; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .dashboard { text-align: center; margin-top: 20px; }
+    .dashboard h3 { margin: 10px 0; }
+    .filter-section { margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; }
+    .filter-section label { display: block; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Income & Expense Dashboard</h2>
+    <div id="clock" class="clock"></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('income')">Income</div>
+      <div class="tab" onclick="switchTab('expenses')">Expenses</div>
+      <div class="tab" onclick="switchTab('dashboard')">Dashboard</div>
+      <div class="tab" onclick="switchTab('history')">History</div>
+    </div>
+
+    <!-- Income Tab -->
+    <div id="income" class="tab-content active">
+      <h3>Daily Income</h3>
+      <label for="incomeDate">Select Date:</label>
+      <input type="date" id="incomeDate" onchange="loadIncome()"><br>
+      <label>Description:</label>
+      <input type="text" id="incomeDesc" placeholder="e.g. Salary">
+      <label>Amount (₹):</label>
+      <input type="number" id="incomeAmount" placeholder="0" min="0">
+      <button onclick="addIncome()">Add Income</button>
+
+      <table id="incomeTable">
+        <thead><tr><th>Description</th><th>Amount</th><th>Action</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="total">Total Income: ₹<span id="incomeTotal">0</span></p>
+    </div>
+
+    <!-- Expenses Tab -->
+    <div id="expenses" class="tab-content">
+      <h3>Daily Expenses</h3>
+      <label for="expenseDate">Select Date:</label>
+      <input type="date" id="expenseDate" onchange="loadExpense()"><br>
+      <label>Description:</label>
+      <input type="text" id="expenseDesc" placeholder="e.g. Groceries">
+      <label>Amount (₹):</label>
+      <input type="number" id="expenseAmount" placeholder="0" min="0">
+      <button onclick="addExpense()">Add Expense</button>
+
+      <table id="expenseTable">
+        <thead><tr><th>Description</th><th>Amount</th><th>Action</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="total">Total Expenses: ₹<span id="expenseTotal">0</span></p>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="tab-content">
+      <div class="dashboard">
+        <!-- Graph Section -->
+        <div class="filter-section">
+          <h4>Income vs Expense Chart</h4>
+          <label>Select Time Range:</label>
+          <select id="chartRange" onchange="updateChartData()">
+            <option value="day">Today</option>
+            <option value="week">Last 7 Days</option>
+            <option value="month">Last 30 Days</option>
+            <option value="custom">Custom Range</option>
+          </select>
+
+          <div id="customRangeSection" style="display:none;">
+            <label>Start Date:</label>
+            <input type="date" id="chartStart">
+            <label>End Date:</label>
+            <input type="date" id="chartEnd">
+             <button onclick="updateChartData()">Apply</button>
+          </div>
+
+          <canvas id="incomeExpenseChart" width="250" height="250" style="margin: auto;"></canvas>
+        </div>
+
+        <h3>Total Income: ₹<span id="dashIncome">0</span></h3>
+        <h3>Total Expenses: ₹<span id="dashExpense">0</span></h3>
+        <h3>Net Balance: ₹<span id="dashBalance">0</span></h3>
+      </div>
+
+      <!-- Export Options -->
+      <div class="filter-section">
+        <h4>Export Data</h4>
+        <label>Select Export Type:</label>
+        <select id="exportType" onchange="toggleExportInputs()">
+          <option value="single">Single Date</option>
+          <option value="range">Custom Date Range</option>
+        </select>
+
+        <div id="singleDateInput">
+          <label>Date:</label>
+          <input type="date" id="exportSingleDate">
+        </div>
+
+        <div id="rangeInputs" style="display:none;">
+          <label>Start Date:</label>
+          <input type="date" id="exportStart">
+          <label>End Date:</label>
+          <input type="date" id="exportEnd">
+        </div>
+
+        <button onclick="exportCSV()">Export CSV</button>
+      </div>
+    </div>
+
+    <!-- History Tab -->
+    <div id="history" class="tab-content">
+      <h3>Saved History</h3>
+
+      <!-- Search Section -->
+      <div class="filter-section">
+        <label>Search by Date:</label>
+        <input type="date" id="searchDate">
+
+        <label>Or Search by Date Range:</label>
+        <input type="date" id="searchStart">
+        <input type="date" id="searchEnd">
+
+        <button onclick="applySearch()">Search</button>
+        <button onclick="clearSearch()">Clear</button>
+      </div>
+
+      <table id="historyTable">
+        <thead>
+          <tr><th>Date</th><th>Income (₹)</th><th>Expenses (₹)</th><th>Net Balance (₹)</th><th>Action</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function getISTDateTime(dateStr=null){ let nowUTC=dateStr?new Date(dateStr):new Date(); return new Date(nowUTC.getTime()+5.5*3600000); }
+    function getTodayIST(){ return getISTDateTime().toISOString().split('T')[0]; }
+    function updateClock(){ let now=getISTDateTime(); document.getElementById("clock").innerText="Current IST Time: "+now.toISOString().split("T")[1].split(".")[0]; }
+    function switchTab(tabId){
+      document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(tc=>tc.classList.remove("active"));
+      document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add("active");
+      document.getElementById(tabId).classList.add("active");
+      if(tabId==="dashboard") updateDashboard();
+      if(tabId==="history") loadHistory();
+    }
+
+    // ---------------- Income ----------------
+    let incomeTotal=0;
+    function getIncomeKey(){ return "income_"+document.getElementById("incomeDate").value; }
+    function saveIncome(){ const rows=document.querySelectorAll("#incomeTable tbody tr"); let data=[],sum=0;
+      rows.forEach(r=>{ let amt=parseFloat(r.cells[1].innerText.replace("₹","")); data.push({desc:r.cells[0].innerText,amount:amt}); sum+=amt; });
+      localStorage.setItem(getIncomeKey(),JSON.stringify(data)); localStorage.setItem(getIncomeKey()+"_total",sum);
+      incomeTotal=sum; document.getElementById("incomeTotal").innerText=sum.toFixed(2); }
+    function loadIncome(){ document.querySelector("#incomeTable tbody").innerHTML=""; incomeTotal=0;
+      let data=localStorage.getItem(getIncomeKey()); if(data){ JSON.parse(data).forEach(d=>addIncome(d.desc,d.amount,true)); } }
+    function addIncome(desc,amount,loading=false){
+      let d=desc||document.getElementById("incomeDesc").value||"(No description)";
+      let a=parseFloat(amount||document.getElementById("incomeAmount").value);
+      if(isNaN(a)||a<=0){ if(!loading) alert("Enter valid amount"); return; }
+      let row=document.createElement("tr");
+      row.innerHTML=`<td>${d}</td><td>₹${a.toFixed(2)}</td><td><button onclick="removeIncome(this,${a})">Clear</button></td>`;
+      document.querySelector("#incomeTable tbody").appendChild(row);
+      incomeTotal+=a; document.getElementById("incomeTotal").innerText=incomeTotal.toFixed(2);
+      if(!loading){ saveIncome(); document.getElementById("incomeDesc").value=""; document.getElementById("incomeAmount").value=""; } }
+    function removeIncome(btn,a){ btn.parentNode.parentNode.remove(); incomeTotal-=a; document.getElementById("incomeTotal").innerText=incomeTotal.toFixed(2); saveIncome(); }
+
+    // ---------------- Expenses ----------------
+    let expenseTotal=0;
+    function getExpenseKey(){ return "expenses_"+document.getElementById("expenseDate").value; }
+    function saveExpense(){ const rows=document.querySelectorAll("#expenseTable tbody tr"); let data=[],sum=0;
+      rows.forEach(r=>{ let amt=parseFloat(r.cells[1].innerText.replace("₹","")); data.push({desc:r.cells[0].innerText,amount:amt}); sum+=amt; });
+      localStorage.setItem(getExpenseKey(),JSON.stringify(data)); localStorage.setItem(getExpenseKey()+"_total",sum);
+      expenseTotal=sum; document.getElementById("expenseTotal").innerText=sum.toFixed(2); }
+    function loadExpense(){ document.querySelector("#expenseTable tbody").innerHTML=""; expenseTotal=0;
+      let data=localStorage.getItem(getExpenseKey()); if(data){ JSON.parse(data).forEach(d=>addExpense(d.desc,d.amount,true)); } }
+    function addExpense(desc,amount,loading=false){
+      let d=desc||document.getElementById("expenseDesc").value||"(No description)";
+      let a=parseFloat(amount||document.getElementById("expenseAmount").value);
+      if(isNaN(a)||a<=0){ if(!loading) alert("Enter valid amount"); return; }
+      let row=document.createElement("tr");
+      row.innerHTML=`<td>${d}</td><td>₹${a.toFixed(2)}</td><td><button onclick="removeExpense(this,${a})">Clear</button></td>`;
+      document.querySelector("#expenseTable tbody").appendChild(row);
+      expenseTotal+=a; document.getElementById("expenseTotal").innerText=expenseTotal.toFixed(2);
+      if(!loading){ saveExpense(); document.getElementById("expenseDesc").value=""; document.getElementById("expenseAmount").value=""; } }
+    function removeExpense(btn,a){ btn.parentNode.parentNode.remove(); expenseTotal-=a; document.getElementById("expenseTotal").innerText=expenseTotal.toFixed(2); saveExpense(); }
+
+    // ---------------- Dashboard ----------------
+    function updateDashboard(){
+      let totalIncome=0,totalExpense=0;
+      for(let i=0;i<localStorage.length;i++){ let k=localStorage.key(i);
+        if(k.endsWith("_total")){ if(k.startsWith("income_")) totalIncome+=parseFloat(localStorage.getItem(k)||0);
+        if(k.startsWith("expenses_")) totalExpense+=parseFloat(localStorage.getItem(k)||0); } }
+      document.getElementById("dashIncome").innerText=totalIncome.toFixed(2);
+      document.getElementById("dashExpense").innerText=totalExpense.toFixed(2);
+      document.getElementById("dashBalance").innerText=(totalIncome-totalExpense).toFixed(2);
+    }
+    function toggleExportInputs(){
+      let type=document.getElementById("exportType").value;
+      document.getElementById("singleDateInput").style.display=(type==="single")?"block":"none";
+      document.getElementById("rangeInputs").style.display=(type==="range")?"block":"none";
+    }
+    function exportCSV(){
+      let type=document.getElementById("exportType").value;
+      let start,end;
+      if(type==="single"){ start=new Date(document.getElementById("exportSingleDate").value); end=new Date(start); }
+      else { start=new Date(document.getElementById("exportStart").value); end=new Date(document.getElementById("exportEnd").value); }
+      if(!start||!end||start>end){ alert("Select valid dates"); return; }
+      let csv="Date,Type,Description,Amount\n";
+      for(let i=0;i<localStorage.length;i++){ let k=localStorage.key(i);
+        if(k.startsWith("income_")||k.startsWith("expenses_")){ let dateStr=k.split("_")[1]; let dateObj=new Date(dateStr);
+          if(dateObj>=start && dateObj<=end && !k.endsWith("_total")){ let arr=JSON.parse(localStorage.getItem(k));
+            arr.forEach(it=>{ csv+=`${dateStr},${k.startsWith("income_")?"Income":"Expense"},${it.desc},${it.amount}\n`; }); } } }
+      let blob=new Blob([csv],{type:"text/csv;charset=utf-8;"}); let link=document.createElement("a");
+      link.href=URL.createObjectURL(blob); link.download="export.csv"; link.click();
+    }
+
+    // ---------------- History ----------------
+    function loadHistory(filterFn=null){
+      let body=document.querySelector("#historyTable tbody"); body.innerHTML="";
+      let allDates=new Set();
+      for(let i=0;i<localStorage.length;i++){ let k=localStorage.key(i);
+        if(k.startsWith("income_")||k.startsWith("expenses_")) allDates.add(k.split("_")[1]); }
+      Array.from(allDates).sort().forEach(date=>{
+        let inc=parseFloat(localStorage.getItem("income_"+date+"_total")||0);
+        let exp=parseFloat(localStorage.getItem("expenses_"+date+"_total")||0);
+        if(filterFn && !filterFn(new Date(date))) return;
+        let row=document.createElement("tr");
+        row.innerHTML=`<td>${date}</td><td>₹${inc.toFixed(2)}</td><td>₹${exp.toFixed(2)}</td><td>₹${(inc-exp).toFixed(2)}</td>
+        <td><button onclick="deleteHistory('${date}')">Delete</button></td>`;
+        body.appendChild(row);
+      });
+    }
+    function applySearch(){
+      let sDate=document.getElementById("searchDate").value;
+      let start=document.getElementById("searchStart").value;
+      let end=document.getElementById("searchEnd").value;
+      let fn=null;
+      if(sDate) fn=(d)=>d.toISOString().split("T")[0]===sDate;
+      else if(start&&end){ let s=new Date(start), e=new Date(end); fn=(d)=>d>=s && d<=e; }
+      loadHistory(fn);
+    }
+    function clearSearch(){ document.getElementById("searchDate").value=""; document.getElementById("searchStart").value=""; document.getElementById("searchEnd").value=""; loadHistory(); }
+    function deleteHistory(date){
+      localStorage.removeItem("income_"+date); localStorage.removeItem("income_"+date+"_total");
+      localStorage.removeItem("expenses_"+date); localStorage.removeItem("expenses_"+date+"_total");
+      loadHistory(); updateDashboard();
+    }
+
+    // ---------------- Init ----------------
+    window.onload=function(){
+      document.getElementById("incomeDate").value=getTodayIST();
+      document.getElementById("expenseDate").value=getTodayIST();
+      loadIncome(); loadExpense(); updateDashboard();
+      updateClock(); setInterval(updateClock,1000);
+    }
+  </script>
+
+
+
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  let chartInstance = null;
+
+  function renderTotalChart() {
+    const income = parseFloat(document.getElementById("dashIncome").innerText) || 0;
+    const expense = parseFloat(document.getElementById("dashExpense").innerText) || 0;
+
+    const ctx = document.getElementById("incomeExpenseChart").getContext("2d");
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: ["Total Income", "Total Expenses"],
+        datasets: [{
+          data: [income, expense],
+          backgroundColor: ["green", "red"],
+          hoverOffset: 10
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          title: {
+            display: true,
+            text: "Total Income vs Total Expenses"
+          }
+        }
+      }
+    });
+  }
+
+  const originalSwitchTab = switchTab;
+  switchTab = function(tabId) {
+    originalSwitchTab(tabId);
+    if (tabId === "dashboard") {
+      updateDashboard(); // Ensure totals are refreshed
+      renderTotalChart(); // Now show the total chart
+    }
+  };
+</script>
+
+</body>
+</html>
+
